@@ -1,4 +1,4 @@
-use super::{lexer::{TextSpan, Token, TokenKind}, Ast, AstExpression, AstExpressionKind, AstStatement, AstStatementKind};
+use super::{lexer::{ Token, TokenKind}, AstExpression, AstExpressionKind, AstStatement, AstStatementKind};
 
 pub struct Parser{
    pub(crate) tokens:Vec<Token>,
@@ -28,11 +28,13 @@ impl Parser{
     }
     fn parse_statement(&mut self)->Option<AstExpression>{
         let token = self.current()?;
+    
         match token.kind{
             TokenKind::Number(number) => {
                let number_expression = AstExpressionKind::Number(super::AstNumberExpression { number });
                return Some(AstExpression{kind: number_expression});
             },
+            
             _ => None
            
         }

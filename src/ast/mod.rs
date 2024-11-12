@@ -11,7 +11,9 @@ pub struct Ast{
     pub statements: Vec<AstStatement>,
   
 }
-pub struct AstPrinter;
+pub struct AstPrinter{
+    indent: usize
+}
 
 #[derive(Debug)]
 pub struct AstStatement{
@@ -47,6 +49,10 @@ impl Ast{
             visitor.visit_statement(stmt);
         }
      }
+     pub fn visualize(&mut self){
+        let mut printer = AstPrinter{indent:0 };
+        self.visit(&mut printer);
+     }
 
     }
 
@@ -81,9 +87,31 @@ pub trait AstVisitor{
     
 }
 
-
+impl AstPrinter{
+     pub fn print_with_indent(&self,text:&str){
+        println!("{}{}"," ".repeat(self.indent),text);
+        
+     }
+}
 impl AstVisitor for AstPrinter{
+    
+    fn visit_statement(&mut self,stmt:&AstStatement) {
+        self.print_with_indent("Statement:");
+        self.indent += 2;
+        self.do_visit_statement(stmt);
+        self.indent -= 2;
+
+        
+    }
+    fn visit_expression(&mut self,expr:&AstExpression) {
+        self.print_with_indent("Expression:");
+        self.indent+=2;
+        self.do_visit_expression(expr);
+        self.indent -= 2;
+    }
+
+
     fn visit_number(&mut self,number:&AstNumberExpression) {
-        println!("{}",number.number);
+        self.print_with_indent(&format!("Number: {}", number.number ));
     }
 }
