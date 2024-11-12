@@ -27,12 +27,13 @@ pub enum TokenKind{
    LeftParam,
    RightParam,
    Eof,
+   Whitespace,
    Bad
 }
 #[derive(PartialEq,Eq,Clone,Debug)]
 pub struct Token{
-    kind:TokenKind,
-    span:TextSpan
+    pub kind:TokenKind,
+    pub span:TextSpan
 }
 impl Token{
     pub fn new(kind:TokenKind,span:TextSpan)->Self{
@@ -80,8 +81,9 @@ impl<'a> Lexer<'a>{
             kind = self.consume_operator().unwrap();
         
             println!("{:?}",kind);
-        }else{
-            kind = TokenKind::Bad;
+        }else if self.is_whitespace(&c){
+            kind = TokenKind::Whitespace;
+            self.consume().unwrap();
         }
         let end = self.current_position;
         let literal = c.to_string();
@@ -130,6 +132,9 @@ impl<'a> Lexer<'a>{
     fn is_binary_operator(&self,c:&char)->bool{
         let operators: HashSet<char> = ['+', '-', '*', '/', '%', '&', '|'].iter().cloned().collect();
         operators.contains(c)
+    }
+    fn is_whitespace(&self,c:&char)->bool{
+        c.is_whitespace()
     }
 
     // fn peek_char(&self)->Option<char>{
