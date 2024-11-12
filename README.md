@@ -1,5 +1,6 @@
 ## Running the Project
 
-run
+To run the project, use the following command:
 
+```bash
 cargo run

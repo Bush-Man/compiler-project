@@ -80,7 +80,6 @@ impl<'a> Lexer<'a>{
         }else if self.is_binary_operator(&c) {
             kind = self.consume_operator().unwrap();
         
-            println!("{:?}",kind);
         }else if self.is_whitespace(&c){
             kind = TokenKind::Whitespace;
             self.consume().unwrap();

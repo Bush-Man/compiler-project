@@ -1,49 +1,94 @@
-use super::{lexer::{ Token, TokenKind}, AstExpression, AstExpressionKind, AstStatement, AstStatementKind};
+use crate::ast::AstNumberExpression;
 
-pub struct Parser{
-   pub(crate) tokens:Vec<Token>,
-   pub(crate)  current:usize
+use super::{lexer::{Token, TokenKind}, AstBinOperator, AstBinOperatorKind, AstExpression, AstExpressionKind, AstStatement, AstStatementKind};
+
+pub struct Parser {
+    pub(crate) tokens: Vec<Token>,
+    pub(crate) current: usize,
 }
 
-
-impl Parser{
-    pub fn new()->Parser{
-        Parser{
+impl Parser {
+    pub fn new() -> Parser {
+        Parser {
             tokens: Vec::new(),
-            current:0
-
+            current: 0,
         }
     }
 
-    pub fn from_tokens(tokens:Vec<Token>)->Self{
-        Self{tokens,current:0}
+    pub fn from_tokens(tokens: Vec<Token>) -> Self {
+        Self { tokens, current: 0 }
     }
 
-    //gets a statement from a token.
-    pub fn next_statement(&mut self)->Option<AstStatement>{
-        // must convert from Token to AstStatement for each TokenKind, we return the equivalent AstExpressionKind 
-        let expr =  self.parse_statement()?;
-        let ast_stmt = AstStatement{kind:AstStatementKind::Expression(expr)};
-        return Some(ast_stmt);
+    // creates a statement from a token.
+    pub fn next_statement(&mut self) -> Option<AstStatement> {
+        
+        let expr = self.parse_expression()?;
+        let ast_stmt = AstStatement {
+            kind: AstStatementKind::Expression(expr),
+        };
+        Some(ast_stmt)
     }
-    fn parse_statement(&mut self)->Option<AstExpression>{
-        let token = self.current()?;
-    
-        match token.kind{
-            TokenKind::Number(number) => {
-               let number_expression = AstExpressionKind::Number(super::AstNumberExpression { number });
-               return Some(AstExpression{kind: number_expression});
-            },
+
+    // Takes a binary token and gives the equivalent AstBinOperator.
+    fn parse_binary_expression(&mut self, precedence: u8) -> Option<AstExpression> {
+        let mut left = self.parse_primary_expression()?;
+         while let Some(operator) = self.parse_binary_operator(){
+            // print!("parse_binary_expression: {:?}",operator);
+            // let operator_precedence = operator.precedence();
+            // if operator_precedence < precedence {
+            //     break;
+            // }
+            let right = self.parse_binary_expression(0)?;
             
-            _ => None
-           
-        }
+            left = AstExpression::binary(operator, left, right);
+         }
+        
+        Some(left)
     }
 
-    fn peek(&self,offset:usize)->Option<&Token>{
-        self.tokens.get(self.current + offset)
+    fn parse_binary_operator(&mut self) -> Option<AstBinOperator> {
+        let token = self.consume()?;
+
+        let kind = match token.kind {
+            TokenKind::Asterisk => AstBinOperatorKind::Multiply,
+            TokenKind::Minus => AstBinOperatorKind::Minus,
+            TokenKind::Plus => AstBinOperatorKind::Plus,
+            TokenKind::Slash => AstBinOperatorKind::Divide,
+            _ => return None, 
+        };
+        
+         Some(AstBinOperator::new(kind, token.clone()))
     }
-    fn current(&self)->Option<&Token>{
+
+    fn parse_primary_expression(&mut self) -> Option<AstExpression> {
+        let token = self.consume()?;
+        if token.kind == TokenKind::Eof {
+            return None;
+        }
+        let kind = match token.kind {
+            TokenKind::Number(number) => AstExpressionKind::Number(AstNumberExpression{number}),
+            _ => return None,
+        };
+        // print!("parse_primary_expression: {:?}",kind);
+
+        Some(AstExpression { kind })
+    }
+
+    fn parse_expression(&mut self) -> Option<AstExpression> {
+        self.parse_binary_expression(0)
+    }
+
+    fn peek(&self, offset: isize) -> Option<&Token> {
+        self.tokens.get((self.current as isize + offset) as usize)
+    }
+
+    fn current(&self) -> Option<&Token> {
         self.peek(0)
+    }
+
+    fn consume(&mut self) -> Option<Token> {  
+        let token = self.tokens.get(self.current)?.clone();  
+        self.current += 1;
+        Some(token)
     }
 }
