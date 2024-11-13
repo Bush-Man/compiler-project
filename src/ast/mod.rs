@@ -1,11 +1,10 @@
-use core::num;
-use std::fmt::Binary;
+use lexer::Token;
 
-use lexer::{TextSpan, Token};
+
 
 pub mod lexer;
 pub mod parser;
-
+pub mod evaluator;
 
 #[derive(Debug,Clone)]
 pub struct Ast{
@@ -29,10 +28,16 @@ pub enum AstStatementKind{
 pub struct AstExpression{
     kind :AstExpressionKind
 }
+
+#[derive(Debug,Clone)]
+pub struct ParenthesizedExpression{
+    expression:Box<AstExpression>
+}
 #[derive(Debug,Clone)]
 pub enum AstExpressionKind{
     Number(AstNumberExpression),
-    Binary(BinaryExpr)
+    Binary(BinaryExpr),
+    Parenthesized(ParenthesizedExpression)
 
 }
 #[derive(Debug,Clone)]
@@ -45,7 +50,7 @@ pub enum AstBinOperatorKind{
     Minus,
     Divide,
     Multiply,
-    NotDefined
+    // NotDefined
 }
 #[derive(Debug,Clone)]
 pub struct AstBinOperator{
@@ -92,8 +97,12 @@ pub trait AstVisitor{
     self.visit_expression(&binary.left);
     self.visit_expression(&binary.right);
    }
+   fn visit_parenthesized_expression(&mut self,parenthesized_expr:&ParenthesizedExpression){
+    self.visit_expression(&parenthesized_expr.expression);
+   }
+
    
-  
+   
 
     fn do_visit_statement(&mut self,stmt:&AstStatement){
         match &stmt.kind{
@@ -110,6 +119,9 @@ pub trait AstVisitor{
             },
             AstExpressionKind::Binary(expr)=>{
                 self.visit_binary_expression(expr);
+            },
+            AstExpressionKind::Parenthesized(expr)=>{
+                self.visit_parenthesized_expression(expr);
             }
 
             _ => todo!("do visit expression not finished")
@@ -151,7 +163,7 @@ impl AstVisitor for AstPrinter{
     fn visit_binary_expression(&mut self,binary:&BinaryExpr) {
         self.print_with_indent("Binary Expression:");
         self.indent+=2;
-        self.print_with_indent(&format!("Operator: {:?}",binary.operator));
+        self.print_with_indent(&format!("Operator: {:?}",binary.operator.kind));
         self.visit_expression(&binary.left);
         self.visit_expression(&binary.right);
         self.indent -= 2;
@@ -170,6 +182,9 @@ impl AstExpression{
     pub fn binary(operator:AstBinOperator,left:AstExpression,right:AstExpression)->Self{
         AstExpression::new(AstExpressionKind::Binary(BinaryExpr{ left: Box::new(left), operator,right:Box::new( right)}))
     }
+    pub fn parenthesized(expression:AstExpression)->Self{
+        AstExpression::new(AstExpressionKind::Parenthesized(ParenthesizedExpression { expression: Box::new(expression) }))
+    }
 }
 
 impl AstBinOperator{
@@ -183,7 +198,6 @@ impl AstBinOperator{
             AstBinOperatorKind::Minus => 1,
             AstBinOperatorKind::Multiply => 2,
             AstBinOperatorKind::Plus => 1,
-            AstBinOperatorKind::NotDefined => u8::MAX
             
         };
     }

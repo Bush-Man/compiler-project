@@ -16,7 +16,8 @@ impl Parser {
     }
 
     pub fn from_tokens(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0 }
+        Self { tokens:tokens.into_iter().filter(|tok| tok.kind != TokenKind::Whitespace).collect()
+            , current: 0 }
     }
 
     // creates a statement from a token.
@@ -30,21 +31,36 @@ impl Parser {
     }
 
     // Takes a binary token and gives the equivalent AstBinOperator.
-    fn parse_binary_expression(&mut self, precedence: u8) -> Option<AstExpression> {
-        let mut left = self.parse_primary_expression()?;
-         while let Some(operator) = self.parse_binary_operator(){
-            // print!("parse_binary_expression: {:?}",operator);
-            // let operator_precedence = operator.precedence();
-            // if operator_precedence < precedence {
-            //     break;
-            // }
-            let right = self.parse_binary_expression(0)?;
-            
-            left = AstExpression::binary(operator, left, right);
-         }
+   fn parse_binary_expression(&mut self, precedence: u8) -> Option<AstExpression> {
+    let mut left = self.parse_primary_expression()?;
+    
+    while let Some(operator) = self.parse_binary_operator() {
+        let operator_precedence = operator.precedence();
+
+        // If the operator's precedence is less than the current precedence, stop parsing.
+        if operator_precedence < precedence {
+            break;
+        }
+
+        // Handle the next operator with higher precedence in a recursive call
+        let mut right = self.parse_primary_expression()?;
         
-        Some(left)
+        // Check for right-associative operators by using precedence + 1
+        while let Some(next_op) = self.parse_binary_operator() {
+            let next_op_precedence = next_op.precedence();
+            if next_op_precedence <= operator_precedence {
+                self.current -= 1; // Backtrack one token to reprocess this operator
+                break;
+            }
+            right = AstExpression::binary(next_op, right, self.parse_binary_expression(next_op_precedence)?);
+        }
+
+        left = AstExpression::binary(operator, left, right);
     }
+    
+    Some(left)
+}
+
 
     fn parse_binary_operator(&mut self) -> Option<AstBinOperator> {
         let token = self.consume()?;
@@ -61,17 +77,40 @@ impl Parser {
     }
 
     fn parse_primary_expression(&mut self) -> Option<AstExpression> {
+        
+       
         let token = self.consume()?;
-        if token.kind == TokenKind::Eof {
-            return None;
-        }
-        let kind = match token.kind {
-            TokenKind::Number(number) => AstExpressionKind::Number(AstNumberExpression{number}),
-            _ => return None,
-        };
-        // print!("parse_primary_expression: {:?}",kind);
 
-        Some(AstExpression { kind })
+            if token.kind == TokenKind::Eof {
+            return None;
+             }
+             match token.kind {
+            TokenKind::Number(number) =>{ 
+                AstExpressionKind::Number(AstNumberExpression{number});
+                return Some(AstExpression::number(number));
+            },
+            TokenKind::LeftParam =>{
+                //  self.consume()?;
+                let expr = self.parse_binary_expression(0)?;
+               return Some(expr);
+
+
+            },
+            TokenKind::RightParam=>{
+                // self.consume();
+                let expr = self.parse_binary_expression(0)?;
+                return Some(expr);
+            }
+
+            _ => return None,
+
+        };
+    
+        
+    
+        
+        // print!("parse_primary_expression: {:?}",kind);
+    
     }
 
     fn parse_expression(&mut self) -> Option<AstExpression> {

@@ -83,12 +83,18 @@ impl<'a> Lexer<'a>{
         }else if self.is_whitespace(&c){
             kind = TokenKind::Whitespace;
             self.consume().unwrap();
+        }else if self.is_punctuation(&c){
+             kind = self.consume_punctuation().unwrap();
+
+        }else{
+            println!("Bad Token");
         }
         let end = self.current_position;
         let literal = c.to_string();
         let span = TextSpan::new(start, end, literal);
         let token = Token::new(kind,span);
         return token;
+
         });
         
         
@@ -125,12 +131,25 @@ impl<'a> Lexer<'a>{
             _ => Some(TokenKind::Bad)
         };
     }
+    fn consume_punctuation(&mut self)->Option<TokenKind>{
+        let c = self.consume().unwrap();
+        return match c{
+            '(' =>Some(TokenKind::LeftParam),
+            ')'=> Some(TokenKind::RightParam),
+            _ => None
+        }
+    }
+    
     fn is_number_start(&self,c:&char)->bool{
         c.is_digit(10)
     }
     fn is_binary_operator(&self,c:&char)->bool{
         let operators: HashSet<char> = ['+', '-', '*', '/', '%', '&', '|'].iter().cloned().collect();
         operators.contains(c)
+    }
+    fn is_punctuation(&self,c:&char)->bool{
+        let punctuations: HashSet<char> = ['(', ')', '$', '?', '!'].iter().cloned().collect();
+        punctuations.contains(c)
     }
     fn is_whitespace(&self,c:&char)->bool{
         c.is_whitespace()
